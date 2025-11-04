@@ -859,41 +859,27 @@ NvidiaOpticalFlowImpl_2::NvidiaOpticalFlowImpl_2(
     NVOF_API_CALL(GetAPI()->nvOFGetCaps(GetHandle(), NV_OF_CAPS_SUPPORTED_OUTPUT_GRID_SIZES, nullptr, &size));
     std::unique_ptr<uint32_t[]> val2(new uint32_t[size]);
     NVOF_API_CALL(GetAPI()->nvOFGetCaps(GetHandle(), NV_OF_CAPS_SUPPORTED_OUTPUT_GRID_SIZES, val2.get(), &size));
+    
+    m_hwGridSize = (NV_OF_OUTPUT_VECTOR_GRID_SIZE)NV_OF_OUTPUT_VECTOR_GRID_SIZE_MAX;
     for (uint32_t i = 0; i < size; i++)
     {
-        if (m_gridSize != val2[i])
-        {
-            size = 0;
-            NVOF_API_CALL(GetAPI()->nvOFGetCaps(GetHandle(), NV_OF_CAPS_SUPPORTED_OUTPUT_GRID_SIZES, nullptr, &size));
-            std::unique_ptr<uint32_t[]> val3(new uint32_t[size]);
-            NVOF_API_CALL(GetAPI()->nvOFGetCaps(GetHandle(), NV_OF_CAPS_SUPPORTED_OUTPUT_GRID_SIZES, val3.get(), &size));
-
-            m_hwGridSize = (NV_OF_OUTPUT_VECTOR_GRID_SIZE)NV_OF_OUTPUT_VECTOR_GRID_SIZE_MAX;
-            for (uint32_t i = 0; i < size; i++)
-            {
-                if (m_gridSize == val3[i])
-                {
-                    m_hwGridSize = m_gridSize;
-                    break;
-                }
-                if (m_gridSize < val3[i] && val3[i] < m_hwGridSize)
-                {
-                    m_hwGridSize = (NV_OF_OUTPUT_VECTOR_GRID_SIZE)val3[i];
-                }
-            }
-            if (m_hwGridSize >= (NV_OF_OUTPUT_VECTOR_GRID_SIZE)NV_OF_OUTPUT_VECTOR_GRID_SIZE_MAX)
-            {
-                CV_Error(Error::StsBadArg, "Invalid Grid Size");
-            }
-            else
-            {
-                m_scaleFactor = m_hwGridSize / m_gridSize;
-            }
-        }
-        else
+        if (m_gridSize == val2[i])
         {
             m_hwGridSize = m_gridSize;
+            break;
         }
+        if (m_gridSize < val2[i] && val2[i] < m_hwGridSize)
+        {
+            m_hwGridSize = val2[i];
+        }
+    }
+    if (m_hwGridSize >= (NV_OF_OUTPUT_VECTOR_GRID_SIZE)NV_OF_OUTPUT_VECTOR_GRID_SIZE_MAX)
+    {
+        CV_Error(Error::StsBadArg, "Invalid Grid Size");
+    }
+    else
+    {
+        m_scaleFactor = m_hwGridSize / m_gridSize;
     }
 
     auto nOutWidth = (m_width + m_hwGridSize - 1) / m_hwGridSize;
